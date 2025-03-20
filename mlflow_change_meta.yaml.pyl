@@ -1,0 +1,49 @@
+import os
+import re
+import glob
+
+# Define your root path.
+root_path = r'C:\Users\User\mlruns\837261391699088517' #change this "837261391699088517" is the experiment id
+
+# Normalize and split the root_path to derive new values.
+norm_path = os.path.normpath(root_path)
+path_parts = norm_path.split(os.sep)
+new_user_id = path_parts[2] if len(path_parts) >= 3 else 'unknown'
+new_experiment_id = path_parts[-1]
+
+# Use forward slashes for the artifact URI to avoid escape sequence issues.
+new_artifact_uri_base = 'file:///C:/Users/lewka/mlruns/837261391699088517'
+
+# Use glob to find all meta.yaml files recursively under the root_path.
+meta_files = glob.glob(os.path.join(root_path, '**', 'meta.yaml'), recursive=True)
+
+for file_path in meta_files:
+    with open(file_path, 'r') as f:
+        content = f.read()
+
+    # Update artifact_uri line while preserving the run id.
+    content = re.sub(
+        r'artifact_uri: .*?/([0-9a-f]{32})/artifacts',
+        fr'artifact_uri: {new_artifact_uri_base}/\1/artifacts',
+        content
+    )
+
+    # Update experiment_id line.
+    content = re.sub(
+        r"experiment_id:\s*'.*?'",
+        f"experiment_id: '{new_experiment_id}'",
+        content
+    )
+
+    # Update user_id line.
+    content = re.sub(
+        r"user_id:\s*\S+",
+        f"user_id: {new_user_id}",
+        content
+    )
+
+    # Write the updated content back to the file.
+    with open(file_path, 'w') as f:
+        f.write(content)
+
+print("All meta.yaml files updated successfully.")
